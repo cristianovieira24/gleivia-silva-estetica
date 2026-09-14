@@ -120,7 +120,6 @@ function nextOpenDates(limit = BOOKING_CONFIG.daysAhead) {
   return dates;
 }
 
-function minutesForSlot(h,m){ return h*60+m; }
 function slotLabel(minutes){ return `${pad(Math.floor(minutes/60))}:${pad(minutes%60)}`; }
 function durationFits(start, duration){ return start + duration <= BOOKING_CONFIG.closeHour * 60; }
 function slotIsBooked(date, start, duration){
@@ -153,7 +152,6 @@ function injectBookingStyles(){
   .booking-right{padding:42px;background:#eee7df}
   .booking-eyebrow{font:10px/1 Manrope,sans-serif;letter-spacing:.17em;text-transform:uppercase;color:#81736a}
   .booking-title{font:clamp(42px,5vw,70px)/.88 Italiana,serif;font-weight:400;letter-spacing:-.04em;margin:18px 0 30px}
-  .booking-step{display:none}.booking-step.active{display:block}
   .booking-section-title{font:12px Manrope,sans-serif;text-transform:uppercase;letter-spacing:.14em;margin:0 0 15px}
   .booking-services{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:30px}
   .booking-service{border:1px solid #d8cfc6;background:transparent;padding:16px;text-align:left;cursor:pointer;transition:.2s ease;display:flex;justify-content:space-between;gap:10px}
@@ -227,11 +225,7 @@ function createBookingModal(){
 }
 
 const bookingOverlay = createBookingModal();
-const booking = {
-  service: BOOKING_CONFIG.services[0],
-  date: null,
-  time: null,
-};
+const booking = { service: BOOKING_CONFIG.services[0], date: null, time: null };
 
 function renderBookingServices(){
   const box=bookingOverlay.querySelector('.booking-services');
@@ -333,6 +327,13 @@ document.querySelectorAll('a[href*="fresha.com"]').forEach(link=>{
 document.querySelectorAll('.service-row').forEach(row=>{
   row.style.cursor='pointer';
   row.addEventListener('click',()=>openBooking());
+});
+
+/* Hide references to the old external provider in the rendered interface. */
+document.querySelectorAll('body *').forEach((el)=>{
+  if(el.children.length===0 && /Fresha/i.test(el.textContent)){
+    el.textContent=el.textContent.replace(/Fresha/gi,'agenda online');
+  }
 });
 
 /* ---------- Reveal animations ---------- */
