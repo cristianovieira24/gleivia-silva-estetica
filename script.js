@@ -1,343 +1,64 @@
-/* =========================================================
-   GLEIVIA SILVA ESTÉTICA — interactive experience
-   Booking is intentionally handled by the site itself.
-   This version stores reservations locally in the browser so the
-   complete UX can be tested without an external booking provider.
-   For production, the storage layer should be replaced by a shared DB/API.
-========================================================= */
-
-const BOOKING_CONFIG = {
-  daysAhead: 35,
-  openHour: 10,
-  closeHour: 19,
-  slotMinutes: 30,
-  closedWeekday: 0,
-  currency: '€',
-  services: [
-    { id:'pedicure-calista', name:'Pedicure Calista', duration:90, price:45 },
-    { id:'pedicure-tradicional', name:'Pedicure Tradicional', duration:60, price:30 },
-    { id:'manicure-simples', name:'Manicure Simples', duration:40, price:15 },
-    { id:'premium', name:'Limpeza de Pele Premium', duration:90, price:50 },
-    { id:'massagem-relaxamento', name:'Massagem de Relaxamento', duration:60, price:35 },
-    { id:'zona-l', name:'Depilação — Zona L', duration:15, price:30 },
-    { id:'zona-xxl', name:'Depilação — Zona XXL', duration:40, price:50 }
-  ]
+const services={
+ 'pedicure-medical':{title:'Pedicure Medical',kicker:'Especialidade',duration:'sob avaliação',price:'consultar',intro:'Um cuidado técnico e personalizado para pés e unhas, pensado para quem procura mais atenção ao detalhe e ao conforto.',benefits:['Cuidado detalhado da pele e das unhas','Sensação de conforto e bem-estar nos pés','Atenção individual às necessidades apresentadas'],recommendation:'Pode ser a melhor escolha quando o objetivo é dedicar mais atenção aos pés ou quando existe uma necessidade específica a avaliar.'},
+ pedicure:{title:'Pedicure',kicker:'Pés',duration:'sob consulta',price:'consultar',intro:'Um cuidado completo para manter os pés tratados, apresentáveis e confortáveis.',benefits:['Higiene e cuidado das unhas','Cuidado das cutículas e da pele','Acabamento bonito e sensação de leveza'],recommendation:'Ideal para manutenção regular ou quando pretende voltar a cuidar dos pés com calma.'},
+ manicure:{title:'Manicure',kicker:'Mãos',duration:'sob consulta',price:'consultar',intro:'Um tratamento dedicado às mãos e unhas, com acabamento delicado e atenção às cutículas.',benefits:['Unhas cuidadas e uniformes','Cutículas tratadas','Acabamento elegante e sensação de cuidado'],recommendation:'Uma boa escolha para manutenção das unhas ou antes de uma ocasião especial.'},
+ facial:{title:'Limpeza de Pele',kicker:'Rosto',duration:'sob consulta',price:'consultar',intro:'Um cuidado facial focado em limpeza, equilíbrio e sensação de pele renovada.',benefits:['Limpeza e higienização da pele','Sensação de frescura e luminosidade','Momento de cuidado e relaxamento'],recommendation:'Indicada quando sente a pele sobrecarregada, sem viço ou quando procura uma rotina de cuidado mais completa.'},
+ massagem:{title:'Massagens',kicker:'Bem-estar',duration:'sob consulta',price:'consultar',intro:'Um momento dedicado a desacelerar, relaxar e devolver leveza ao corpo.',benefits:['Ajuda a promover relaxamento','Pode proporcionar sensação de alívio de tensão','Tempo de pausa e bem-estar'],recommendation:'Uma escolha natural quando o principal objetivo é parar, respirar e cuidar do corpo.'},
+ depilacao:{title:'Depilação',kicker:'Pele',duration:'varia por zona',price:'consultar',intro:'Opções de depilação para diferentes zonas, realizadas com atenção ao conforto e à pele.',benefits:['Cuidado direcionado à zona escolhida','Sensação de pele mais lisa','Atendimento adaptado ao procedimento'],recommendation:'A escolha depende da zona e do método disponível. O ideal é selecionar primeiro a área que pretende tratar.'}
 };
-
-const quotes = [
- ['Tom','“Muito profissional incrível, gostei muito do atendimento, lugar agradável tranquilo e o serviço de qualidade. Recomendo muito.”'],
- ['Orlando P','“Que se pode dizer... além do tratamento magnífico que nos proporciona também ajuda a alma. Gleivia fantástica como profissional e como pessoa.”'],
- ['Isadora','“Estou muito feliz e satisfeita mais uma vez com o serviço! És incrivelmente maravilhosa Gleivia 💖”'],
- ['António V','“Excelente profissional, sempre cuidadosa e muito atenta ao que faz e com as melhores dicas e técnicas.”']
+const reviews=[
+ ['Tom','TS','“Muito profissional, gostei muito do atendimento, lugar agradável, tranquilo e serviço de qualidade. Recomendo muito.”'],
+ ['Orlando P','OP','“Que se pode dizer... além do tratamento magnífico que nos proporciona também ajuda a alma. Gleivia fantástica como profissional e como pessoa.”'],
+ ['Isadora','IS','“Estou muito feliz e satisfeita mais uma vez com o serviço! És incrivelmente maravilhosa Gleivia.”'],
+ ['António V','AV','“Excelente profissional, sempre cuidadosa e muito atenta ao que faz e com as melhores dicas e técnicas.”']
 ];
+const bookingServices=[
+ {id:'pedicure-calista',name:'Pedicure Calista',duration:90,price:45},
+ {id:'pedicure-tradicional',name:'Pedicure Tradicional',duration:60,price:30},
+ {id:'manicure-simples',name:'Manicure Simples',duration:40,price:15},
+ {id:'premium',name:'Premium',duration:90,price:50},
+ {id:'massagem',name:'Massagem',duration:60,price:35},
+ {id:'depilacao',name:'Depilação',duration:30,price:30}
+];
+const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
+const escapeHtml=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 
-let quoteIndex = 0;
-const quoteText = document.getElementById('quoteText');
-const quoteName = document.getElementById('quoteName');
-const quoteCount = document.getElementById('quoteCount');
-if (quoteText && quoteName && quoteCount) {
-  const renderQuote = () => {
-    const q = quotes[quoteIndex];
-    quoteName.textContent = q[0];
-    quoteText.textContent = q[1];
-    quoteCount.textContent = `0${quoteIndex + 1} / 04`;
-  };
-  document.getElementById('prev')?.addEventListener('click', () => {
-    quoteIndex = (quoteIndex - 1 + quotes.length) % quotes.length;
-    renderQuote();
-  });
-  document.getElementById('next')?.addEventListener('click', () => {
-    quoteIndex = (quoteIndex + 1) % quotes.length;
-    renderQuote();
-  });
-}
+// Portrait uploaded by the user: stored as encoded asset so the project does not depend on a signed external image URL.
+fetch('assets/gleivia-about.webp.b64').then(r=>r.text()).then(b64=>{const img=$('#gleiviaPortrait');if(img)img.src='data:image/webp;base64,'+b64.trim()}).catch(()=>{});
 
-/* ---------- Image resilience ----------
-   Fresha portfolio URLs are signed and can expire. Instead of leaving
-   broken-image icons behind, we replace failed assets with an elegant,
-   neutral portfolio panel. The site remains visually intact. */
-const placeholder = (label='Imagem') => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100"><rect width="100%" height="100%" fill="#e6ddd5"/><circle cx="450" cy="405" r="155" fill="#d4c3b7"/><path d="M270 760c75-150 285-150 360 0" fill="#c5b0a3"/><text x="450" y="905" text-anchor="middle" font-family="Georgia,serif" font-size="42" fill="#5f5148">${label}</text><text x="450" y="950" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" letter-spacing="4" fill="#8d7d72">GLEIVIA SILVA ESTÉTICA</text></svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-};
+// Graceful image fallback: never show broken-image icons in the proposal.
+$$('img').forEach(img=>img.addEventListener('error',()=>{if(img.dataset.failed)return;img.dataset.failed='1';img.src='data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="100%" height="100%" fill="#e6ddd5"/><text x="50%" y="50%" text-anchor="middle" font-family="Georgia" font-size="30" fill="#796b63">Gleivia Silva Estética</text></svg>`)}));
 
-document.querySelectorAll('img').forEach((img) => {
-  img.addEventListener('error', () => {
-    if (img.dataset.failed) return;
-    img.dataset.failed = '1';
-    const label = img.closest('.editorial-image') ? 'Gleivia' : (img.alt || 'Portfólio').slice(0, 24);
-    img.src = placeholder(label);
-    img.style.objectFit = 'cover';
-  }, { once:true });
-});
+// Reveal motion.
+const revealEls=$$('.reveal,.service-card,.portfolio-item');const revealObs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('is-visible');revealObs.unobserve(e.target)}}),{threshold:.08});revealEls.forEach(e=>revealObs.observe(e));
 
-/* ---------- Before / after comparison ---------- */
-const range = document.getElementById('compareRange');
-const compareFrame = document.getElementById('compareFrame');
-const compareTop = document.querySelector('.compare-top');
-const compareTopImg = document.querySelector('.compare-top .compare-img');
-const compareLine = document.querySelector('.compare-line');
-function resizeCompareImage(){
-  if (!compareFrame || !compareTopImg) return;
-  compareTopImg.style.width = `${compareFrame.clientWidth}px`;
-}
-function updateCompare(){
-  if (!range || !compareTop || !compareLine) return;
-  const value = Number(range.value || 50);
-  compareTop.style.width = value + '%';
-  compareLine.style.left = value + '%';
-}
-range?.addEventListener('input', updateCompare);
-window.addEventListener('resize', resizeCompareImage);
-resizeCompareImage();
-updateCompare();
+function openOverlay(html,klass='site-modal'){const wrap=document.createElement('div');wrap.className=klass;wrap.innerHTML=html;document.body.appendChild(wrap);requestAnimationFrame(()=>wrap.classList.add('open'));const close=()=>{wrap.classList.remove('open');setTimeout(()=>wrap.remove(),220)};wrap.addEventListener('click',e=>{if(e.target===wrap||e.target.closest('[data-close]'))close()});document.addEventListener('keydown',function esc(e){if(e.key==='Escape'){close();document.removeEventListener('keydown',esc)}},{once:true});return wrap}
 
-/* ---------- Booking system ---------- */
-const STORAGE_KEY = 'gleivia-bookings-v1';
-const money = (n) => `${BOOKING_CONFIG.currency}${Number(n).toFixed(0)}`;
-const pad = (n) => String(n).padStart(2,'0');
-const dateKey = (date) => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
-const prettyDate = (key) => {
-  const [y,m,d] = key.split('-').map(Number);
-  return new Intl.DateTimeFormat('pt-PT', { weekday:'long', day:'numeric', month:'long' }).format(new Date(y,m-1,d));
-};
-const storageGet = () => {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-  catch { return []; }
-};
-const storageSet = (v) => localStorage.setItem(STORAGE_KEY, JSON.stringify(v));
-const getService = (id) => BOOKING_CONFIG.services.find(s => s.id === id) || BOOKING_CONFIG.services[0];
+function openService(id){const s=services[id];if(!s)return;openOverlay(`<div class="detail-dialog"><button class="modal-close" data-close>×</button><span class="modal-kicker">${s.kicker}</span><h2>${s.title}</h2><p class="detail-lead">${s.intro}</p><div class="detail-grid"><div><small>DURAÇÃO</small><strong>${s.duration}</strong></div><div><small>VALOR</small><strong>${s.price}</strong></div></div><h3>Benefícios e objetivos</h3><ul>${s.benefits.map(x=>`<li>${x}</li>`).join('')}</ul><div class="recommendation-box"><small>RECOMENDAÇÃO</small><p>${s.recommendation}</p></div><button class="button button-dark js-booking-inside"><span class="icon icon-calendar"></span>Escolher para agendar <strong>→</strong></button></div>`);wrapBookingButton();}
+$$('.js-service').forEach(b=>b.addEventListener('click',()=>openService(b.dataset.service)));
+$('.js-service-list')?.addEventListener('click',()=>openOverlay(`<div class="list-dialog"><button class="modal-close" data-close>×</button><span class="modal-kicker">Catálogo</span><h2>Tratamentos disponíveis</h2><p>Uma demonstração do catálogo que pode existir no site final, antes do passo de agendamento.</p><div class="catalog-grid">${['Pedicure Calista','Pedicure Tradicional','Manicure Simples','Limpeza de Pele Premium','Massagem Corporal','Massagem Facial','Depilação a Cera','Depilação a Laser','Zona L','Zona XXL','Virilha Cavada','Pedicure e Manicure'].map((x,i)=>`<button class="catalog-row js-catalog" data-name="${escapeHtml(x)}"><span>${String(i+1).padStart(2,'0')}</span><strong>${x}</strong><i>↗</i></button>`).join('')}</div></div>`));
 
-function nextOpenDates(limit = BOOKING_CONFIG.daysAhead) {
-  const dates = [];
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  for (let i=0; i<limit; i++) {
-    const candidate = new Date(d);
-    candidate.setDate(d.getDate() + i + 1);
-    if (candidate.getDay() !== BOOKING_CONFIG.closedWeekday) dates.push(candidate);
-  }
-  return dates;
-}
+function wrapBookingButton(){document.querySelectorAll('.js-booking-inside').forEach(b=>b.onclick=()=>{b.closest('.site-modal')?.remove();openBooking()})}
 
-function slotLabel(minutes){ return `${pad(Math.floor(minutes/60))}:${pad(minutes%60)}`; }
-function durationFits(start, duration){ return start + duration <= BOOKING_CONFIG.closeHour * 60; }
-function slotIsBooked(date, start, duration){
-  const bookings = storageGet().filter(b => b.date === date);
-  const end = start + duration;
-  return bookings.some(b => {
-    const existingStart = b.minutes;
-    const existingEnd = existingStart + b.duration;
-    return start < existingEnd && end > existingStart;
-  });
-}
-function generateSlots(date, service){
-  const slots=[];
-  for(let mins=BOOKING_CONFIG.openHour*60; mins<BOOKING_CONFIG.closeHour*60; mins+=BOOKING_CONFIG.slotMinutes){
-    if(durationFits(mins, service.duration) && !slotIsBooked(date, mins, service.duration)) slots.push(mins);
-  }
-  return slots;
-}
+// Recommendation quiz.
+function openQuiz(){const box=openOverlay(`<div class="quiz-dialog"><button class="modal-close" data-close>×</button><span class="modal-kicker">Orientação personalizada</span><h2>Vamos descobrir por onde começar.</h2><p>Responda a três perguntas. No final, mostramos um ponto de partida possível — não substitui uma avaliação profissional.</p><div id="quizBody"></div></div>`);const body=$('#quizBody',box);const answers={goal:null,feel:null,priority:null};let step=0;const questions=[{key:'goal',title:'O que gostaria de cuidar hoje?',opts:[['pés','Pés e unhas'],['mãos','Mãos e unhas'],['pele','Rosto e pele'],['corpo','Corpo e relaxamento']]},{key:'feel',title:'O que mais procura neste momento?',opts:[['cuidado','Manutenção e cuidado'],['resultado','Sentir a pele/unhas mais cuidadas'],['relaxar','Relaxar e aliviar tensão']]},{key:'priority',title:'Prefere um atendimento...',opts:[['tecnico','Mais focado numa necessidade específica'],['suave','Mais relaxante e tranquilo'],['completo','Com uma abordagem mais completa']]}];const render=()=>{const q=questions[step];body.innerHTML=`<div class="quiz-step"><span>0${step+1} / 03</span><h3>${q.title}</h3><div class="quiz-options">${q.opts.map(([v,l])=>`<button data-v="${v}">${l}<i>→</i></button>`).join('')}</div></div>`;body.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{answers[q.key]=btn.dataset.v;if(step<questions.length-1){step++;render()}else result()})};const result=()=>{let picks;if(answers.goal==='pés')picks=['Pedicure Medical','Pedicure Tradicional'];else if(answers.goal==='mãos')picks=['Manicure Simples','Pedicure e Manicure'];else if(answers.goal==='pele')picks=['Limpeza de Pele Premium'];else picks=['Massagem Corporal','Massagem Facial'];box.querySelector('.quiz-dialog').classList.add('result');body.innerHTML=`<div class="quiz-result"><span class="modal-kicker">Possível ponto de partida</span><h3>Pelo que descreveu, estes cuidados podem fazer sentido:</h3><div>${picks.map(p=>`<button class="result-option js-result" data-name="${p}"><strong>${p}</strong><span>Conhecer e agendar →</span></button>`).join('')}</div><small>O resultado é apenas orientativo. A escolha final deve considerar as necessidades avaliadas pela profissional.</small></div>`;body.querySelectorAll('.js-result').forEach(b=>b.onclick=()=>{box.remove();openBooking(b.dataset.name)})};render();}
+$('#openQuiz')?.addEventListener('click',openQuiz);$('#openQuiz2')?.addEventListener('click',openQuiz);
 
-function injectBookingStyles(){
-  if(document.getElementById('booking-runtime-styles')) return;
-  const style=document.createElement('style');
-  style.id='booking-runtime-styles';
-  style.textContent=`
-  body.booking-open{overflow:hidden}
-  .booking-overlay{position:fixed;inset:0;background:rgba(26,21,18,.52);backdrop-filter:blur(12px);z-index:100;display:grid;place-items:center;padding:18px;opacity:0;pointer-events:none;transition:opacity .25s ease}
-  .booking-overlay.open{opacity:1;pointer-events:auto}
-  .booking-modal{width:min(1080px,100%);max-height:min(900px,94vh);overflow:auto;background:#fbf9f6;color:#211d19;display:grid;grid-template-columns:1.05fr .95fr;box-shadow:0 30px 90px rgba(0,0,0,.22)}
-  .booking-left{padding:42px 42px 36px;border-right:1px solid #ded5cd}
-  .booking-right{padding:42px;background:#eee7df}
-  .booking-eyebrow{font:10px/1 Manrope,sans-serif;letter-spacing:.17em;text-transform:uppercase;color:#81736a}
-  .booking-title{font:clamp(42px,5vw,70px)/.88 Italiana,serif;font-weight:400;letter-spacing:-.04em;margin:18px 0 30px}
-  .booking-section-title{font:12px Manrope,sans-serif;text-transform:uppercase;letter-spacing:.14em;margin:0 0 15px}
-  .booking-services{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:30px}
-  .booking-service{border:1px solid #d8cfc6;background:transparent;padding:16px;text-align:left;cursor:pointer;transition:.2s ease;display:flex;justify-content:space-between;gap:10px}
-  .booking-service:hover,.booking-service.selected{background:#2a2522;color:#fff;border-color:#2a2522}
-  .booking-service strong{font:21px/1 Italiana,serif;font-weight:400}.booking-service small{display:block;color:#85776e;margin-top:6px;font:10px Manrope,sans-serif}.booking-service.selected small{color:#d8d0ca}.booking-price{font:12px Manrope,sans-serif;white-space:nowrap}
-  .booking-close{position:absolute;top:15px;right:18px;width:40px;height:40px;border:1px solid rgba(255,255,255,.45);background:#fbf9f6;color:#2a2522;cursor:pointer;font-size:20px;z-index:102}
-  .booking-calendar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.booking-date{border:1px solid #d8cfc6;background:#fbf9f6;padding:12px 8px;cursor:pointer;text-align:center}.booking-date span{display:block;font:9px Manrope,sans-serif;text-transform:uppercase;letter-spacing:.1em;color:#82756b}.booking-date strong{display:block;font:28px Italiana,serif;font-weight:400;margin:3px 0}.booking-date em{font:10px Manrope,sans-serif;font-style:normal;color:#85776e}.booking-date.selected{background:#2a2522;color:white;border-color:#2a2522}.booking-date.selected span,.booking-date.selected em{color:#ded6cf}
-  .booking-times{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.booking-time{border:1px solid #d8cfc6;background:#fff;padding:11px 14px;cursor:pointer;font:11px Manrope,sans-serif}.booking-time:hover,.booking-time.selected{background:#2a2522;color:white;border-color:#2a2522}.booking-empty{font:12px Manrope,sans-serif;color:#83766e;padding:16px 0}
-  .booking-summary{position:sticky;top:0}.booking-summary-card{background:#fff;padding:24px}.booking-summary-card h4{font:34px/1 Italiana,serif;font-weight:400;margin:7px 0 14px}.booking-detail{display:flex;justify-content:space-between;gap:20px;padding:11px 0;border-top:1px solid #e2dad2;font:11px Manrope,sans-serif}.booking-detail strong{font-weight:600;text-align:right}.booking-form{display:grid;gap:12px;margin-top:20px}.booking-form input{width:100%;padding:14px 0;background:transparent;border:0;border-bottom:1px solid #cfc4bb;outline:0;font:12px Manrope,sans-serif}.booking-submit{margin-top:18px;padding:15px 18px;border:1px solid #2a2522;background:#2a2522;color:#fff;font:10px Manrope,sans-serif;text-transform:uppercase;letter-spacing:.14em;cursor:pointer}.booking-submit:disabled{opacity:.45;cursor:not-allowed}.booking-note{font:10px/1.6 Manrope,sans-serif;color:#85776e;margin-top:13px}
-  .booking-success{display:none;text-align:center;padding:35px 10px}.booking-success.show{display:block}.booking-success h3{font:54px/1 Italiana,serif;font-weight:400;margin:18px 0}.booking-success p{font:12px/1.7 Manrope,sans-serif;color:#756a63}.booking-code{margin:25px auto;padding:14px 18px;border:1px solid #d8cfc6;font:11px Manrope,sans-serif;letter-spacing:.1em;background:#fff;max-width:300px}
-  .booking-mobile-note{display:none}
-  @media(max-width:760px){.booking-modal{display:block}.booking-left{border-right:0;padding:34px 22px}.booking-right{padding:24px 22px}.booking-services{grid-template-columns:1fr}.booking-calendar{grid-template-columns:repeat(3,1fr)}.booking-close{top:9px;right:9px}.booking-mobile-note{display:block;font:10px Manrope,sans-serif;color:#85776e;margin:0 0 18px}.booking-summary{position:static}}
-  `;
-  document.head.appendChild(style);
-}
+// Portfolio filter.
+$$('.portfolio-nav button').forEach(btn=>btn.addEventListener('click',()=>{$$('.portfolio-nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');const f=btn.dataset.filter;$$('.portfolio-item').forEach(item=>item.style.display=f==='all'||item.dataset.cat===f?'':'none')}));
 
-function createBookingModal(){
-  injectBookingStyles();
-  const overlay=document.createElement('div');
-  overlay.className='booking-overlay';
-  overlay.id='bookingOverlay';
-  overlay.innerHTML=`
-    <div class="booking-modal" role="dialog" aria-modal="true" aria-label="Agendar tratamento">
-      <button class="booking-close" type="button" aria-label="Fechar">×</button>
-      <div class="booking-left">
-        <div class="booking-eyebrow">Agenda Gleivia Silva Estética</div>
-        <h2 class="booking-title">Reserve o seu<br><em>momento.</em></h2>
-        <p class="booking-mobile-note">O agendamento acontece aqui mesmo no site. Escolha o tratamento, dia e horário.</p>
-        <div class="booking-step active" data-step="1">
-          <h3 class="booking-section-title">01 · Tratamento</h3>
-          <div class="booking-services"></div>
-        </div>
-        <div class="booking-step active" data-step="2">
-          <h3 class="booking-section-title">02 · Data e hora</h3>
-          <div class="booking-calendar"></div>
-          <div class="booking-times"></div>
-        </div>
-      </div>
-      <div class="booking-right">
-        <div class="booking-summary">
-          <div class="booking-eyebrow">O seu agendamento</div>
-          <div class="booking-summary-card">
-            <div class="booking-summary-empty">Escolha um tratamento para continuar.</div>
-            <div class="booking-summary-data" style="display:none">
-              <h4 class="summary-service"></h4>
-              <div class="booking-detail"><span>Duração</span><strong class="summary-duration"></strong></div>
-              <div class="booking-detail"><span>Valor</span><strong class="summary-price"></strong></div>
-              <div class="booking-detail"><span>Data</span><strong class="summary-date">Escolha uma data</strong></div>
-              <div class="booking-detail"><span>Hora</span><strong class="summary-time">Escolha uma hora</strong></div>
-              <form class="booking-form">
-                <input name="name" autocomplete="name" placeholder="Nome completo" required>
-                <input name="phone" autocomplete="tel" placeholder="Telefone / WhatsApp" required>
-                <input name="email" type="email" autocomplete="email" placeholder="Email" required>
-                <button class="booking-submit" type="submit" disabled>Confirmar agendamento</button>
-              </form>
-              <div class="booking-note">Ao confirmar, a reserva fica registada neste navegador. A ligação a uma base de dados partilhada é a próxima etapa para transformar esta agenda em sistema de produção.</div>
-            </div>
-            <div class="booking-success">
-              <div class="booking-eyebrow">Reserva criada</div>
-              <h3>Até breve.</h3>
-              <p>O seu pedido foi registado com sucesso.</p>
-              <div class="booking-code"></div>
-              <button class="booking-submit new-booking" type="button">Novo agendamento</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  return overlay;
-}
+// Reviews.
+let reviewIndex=0;function renderReview(){const [name,initials,text]=reviews[reviewIndex];$('#reviewName').textContent=name;$('#reviewText').textContent=text;$('#reviewIndex').textContent=`0${reviewIndex+1} / 04`;const av=$('.avatar');if(av)av.textContent=initials}$('#reviewNext')?.addEventListener('click',()=>{reviewIndex=(reviewIndex+1)%reviews.length;renderReview()});$('#reviewPrev')?.addEventListener('click',()=>{reviewIndex=(reviewIndex-1+reviews.length)%reviews.length;renderReview()});
 
-const bookingOverlay = createBookingModal();
-const booking = { service: BOOKING_CONFIG.services[0], date: null, time: null };
+// Demo booking flow.
+let selectedService=null,selectedDate=null,selectedTime=null;const storeKey='gleivia-demo-bookings';
+function demoDates(){const arr=[];const d=new Date();d.setHours(0,0,0,0);for(let i=1;i<24;i++){const x=new Date(d);x.setDate(d.getDate()+i);if(x.getDay()!==0)arr.push(x)}return arr}
+function openBooking(preset=''){selectedService=bookingServices.find(x=>x.name.toLowerCase()===preset.toLowerCase())||bookingServices[0];selectedDate=demoDates()[0];selectedTime=null;const modal=openOverlay(`<div class="booking-dialog"><button class="modal-close" data-close>×</button><div class="booking-left"><span class="modal-kicker">Agendamento</span><h2>Reserve o seu<br><em>momento.</em></h2><p>Uma demonstração da experiência de marcação que pode ficar integrada no site.</p><h3>1 · Escolha o tratamento</h3><div class="booking-services">${bookingServices.map(s=>`<button class="booking-choice ${s.id===selectedService.id?'selected':''}" data-id="${s.id}"><strong>${s.name}</strong><span>${s.duration} min · €${s.price}</span></button>`).join('')}</div><h3>2 · Escolha o dia</h3><div class="booking-dates"></div><div class="booking-times"></div></div><div class="booking-right"><span class="modal-kicker">Resumo</span><div class="booking-summary"><h3 class="sum-service"></h3><p class="sum-date"></p><p class="sum-time"></p><div class="booking-form"><input id="bookName" placeholder="Nome completo"><input id="bookPhone" placeholder="Telefone / WhatsApp"><input id="bookEmail" placeholder="Email"><button class="button button-dark" id="confirmBooking"><span class="icon icon-calendar"></span>Confirmar pedido <strong>→</strong></button></div><small>Demo: esta reserva não é enviada para uma base de dados nesta proposta. O fluxo está preparado para receber backend quando o site for contratado.</small></div></div></div>`);
+const renderSummary=()=>{modal.querySelector('.sum-service').textContent=selectedService.name;modal.querySelector('.sum-date').textContent=selectedDate?pretty(selectedDate):'Escolha uma data';modal.querySelector('.sum-time').textContent=selectedTime||'Escolha uma hora'};const pretty=d=>new Intl.DateTimeFormat('pt-PT',{weekday:'long',day:'numeric',month:'long'}).format(d);
+const renderDates=()=>{modal.querySelector('.booking-dates').innerHTML=demoDates().slice(0,10).map((d,i)=>`<button class="date-choice ${selectedDate?.toDateString()===d.toDateString()?'selected':''}" data-i="${i}"><span>${new Intl.DateTimeFormat('pt-PT',{weekday:'short'}).format(d).replace('.','')}</span><strong>${d.getDate()}</strong><small>${new Intl.DateTimeFormat('pt-PT',{month:'short'}).format(d)}</small></button>`).join('');modal.querySelectorAll('.date-choice').forEach(b=>b.onclick=()=>{selectedDate=demoDates()[+b.dataset.i];selectedTime=null;renderDates();renderTimes();renderSummary()})};
+const renderTimes=()=>{const times=['10:00','10:30','11:00','11:30','14:00','14:30','15:00','15:30','16:00','17:00','17:30','18:00'];modal.querySelector('.booking-times').innerHTML=times.map(t=>`<button class="time-choice ${selectedTime===t?'selected':''}" data-t="${t}">${t}</button>`).join('');modal.querySelectorAll('.time-choice').forEach(b=>b.onclick=()=>{selectedTime=b.dataset.t;renderTimes();renderSummary()})};
+modal.querySelectorAll('.booking-choice').forEach(b=>b.onclick=()=>{selectedService=bookingServices.find(s=>s.id===b.dataset.id);modal.querySelectorAll('.booking-choice').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');selectedTime=null;renderSummary();renderTimes()});renderDates();renderTimes();renderSummary();modal.querySelector('#confirmBooking').onclick=()=>{const name=$('#bookName',modal)?.value.trim();const phone=$('#bookPhone',modal)?.value.trim();const email=$('#bookEmail',modal)?.value.trim();if(!name||!phone||!email||!selectedDate||!selectedTime){alert('Preencha os dados e escolha data e horário.');return}localStorage.setItem(storeKey,JSON.stringify({name,phone,email,service:selectedService.name,date:selectedDate.toISOString(),time:selectedTime}));modal.querySelector('.booking-dialog').innerHTML=`<div class="booking-confirmed"><span class="modal-kicker">Pedido recebido</span><h2>Até breve, ${escapeHtml(name.split(' ')[0])}.</h2><p>O fluxo de agendamento está concluído nesta demonstração.</p><div class="confirmation-code">${selectedService.name}<br>${pretty(selectedDate)} · ${selectedTime}</div><button class="button button-dark" data-close>Fechar</button></div>`};return modal}
+$$('.js-booking').forEach(b=>b.addEventListener('click',()=>openBooking()));
 
-function renderBookingServices(){
-  const box=bookingOverlay.querySelector('.booking-services');
-  box.innerHTML=BOOKING_CONFIG.services.map(s=>`<button class="booking-service ${s.id===booking.service.id?'selected':''}" data-service="${s.id}" type="button"><span><strong>${s.name}</strong><small>${s.duration} min</small></span><span class="booking-price">${money(s.price)}</span></button>`).join('');
-  box.querySelectorAll('.booking-service').forEach(btn=>btn.addEventListener('click',()=>{
-    booking.service=getService(btn.dataset.service);
-    booking.time=null;
-    renderBookingServices();
-    renderBookingDates();
-    updateBookingSummary();
-  }));
-}
-function renderBookingDates(){
-  const dates=nextOpenDates();
-  const box=bookingOverlay.querySelector('.booking-calendar');
-  box.innerHTML=dates.slice(0,12).map(d=>{
-    const key=dateKey(d), isSelected=key===booking.date;
-    const day=new Intl.DateTimeFormat('pt-PT',{weekday:'short'}).format(d).replace('.','');
-    const month=new Intl.DateTimeFormat('pt-PT',{month:'short'}).format(d).replace('.','');
-    return `<button type="button" class="booking-date ${isSelected?'selected':''}" data-date="${key}"><span>${day}</span><strong>${d.getDate()}</strong><em>${month}</em></button>`;
-  }).join('');
-  box.querySelectorAll('.booking-date').forEach(btn=>btn.addEventListener('click',()=>{
-    booking.date=btn.dataset.date;
-    booking.time=null;
-    renderBookingDates();
-    renderBookingTimes();
-    updateBookingSummary();
-  }));
-  if(!booking.date){
-    const first=dates[0];
-    if(first){booking.date=dateKey(first);renderBookingDates();renderBookingTimes();}
-  } else renderBookingTimes();
-}
-function renderBookingTimes(){
-  const box=bookingOverlay.querySelector('.booking-times');
-  if(!booking.date){box.innerHTML='';return;}
-  const slots=generateSlots(booking.date,booking.service);
-  box.innerHTML=slots.length ? slots.map(m=>`<button type="button" class="booking-time ${booking.time===m?'selected':''}" data-time="${m}">${slotLabel(m)}</button>`).join('') : '<div class="booking-empty">Sem horários disponíveis para este tratamento neste dia.</div>';
-  box.querySelectorAll('.booking-time').forEach(btn=>btn.addEventListener('click',()=>{booking.time=Number(btn.dataset.time);renderBookingTimes();updateBookingSummary();}));
-}
-function updateBookingSummary(){
-  const empty=bookingOverlay.querySelector('.booking-summary-empty');
-  const data=bookingOverlay.querySelector('.booking-summary-data');
-  if(!booking.service){empty.style.display='block';data.style.display='none';return;}
-  empty.style.display='none';data.style.display='block';
-  bookingOverlay.querySelector('.summary-service').textContent=booking.service.name;
-  bookingOverlay.querySelector('.summary-duration').textContent=`${booking.service.duration} min`;
-  bookingOverlay.querySelector('.summary-price').textContent=money(booking.service.price);
-  bookingOverlay.querySelector('.summary-date').textContent=booking.date?prettyDate(booking.date):'Escolha uma data';
-  bookingOverlay.querySelector('.summary-time').textContent=booking.time!==null?slotLabel(booking.time):'Escolha uma hora';
-  const form=bookingOverlay.querySelector('.booking-form');
-  bookingOverlay.querySelector('.booking-submit').disabled=!(booking.date && booking.time!==null && form.checkValidity());
-}
-
-const openBooking=()=>{
-  bookingOverlay.classList.add('open');
-  document.body.classList.add('booking-open');
-  renderBookingServices();renderBookingDates();updateBookingSummary();
-  setTimeout(()=>bookingOverlay.querySelector('.booking-service')?.focus(),100);
-};
-const closeBooking=()=>{bookingOverlay.classList.remove('open');document.body.classList.remove('booking-open');};
-bookingOverlay.querySelector('.booking-close').addEventListener('click',closeBooking);
-bookingOverlay.addEventListener('click',(e)=>{if(e.target===bookingOverlay)closeBooking();});
-document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&bookingOverlay.classList.contains('open'))closeBooking();});
-bookingOverlay.querySelector('.booking-form').addEventListener('input',updateBookingSummary);
-bookingOverlay.querySelector('.booking-form').addEventListener('submit',(e)=>{
-  e.preventDefault();
-  const form=new FormData(e.currentTarget);
-  const record={
-    id:`GLV-${Date.now().toString(36).toUpperCase()}`,
-    service:booking.service.name,
-    price:booking.service.price,
-    duration:booking.service.duration,
-    date:booking.date,
-    minutes:booking.time,
-    name:String(form.get('name')).trim(),
-    phone:String(form.get('phone')).trim(),
-    email:String(form.get('email')).trim(),
-    createdAt:new Date().toISOString()
-  };
-  const all=storageGet(); all.push(record); storageSet(all);
-  bookingOverlay.querySelector('.booking-summary-data').style.display='none';
-  bookingOverlay.querySelector('.booking-success').classList.add('show');
-  bookingOverlay.querySelector('.booking-code').textContent=`${record.id} · ${prettyDate(record.date)} · ${slotLabel(record.minutes)}`;
-});
-bookingOverlay.querySelector('.new-booking').addEventListener('click',()=>{
-  booking.date=null;booking.time=null;booking.service=BOOKING_CONFIG.services[0];
-  bookingOverlay.querySelector('.booking-success').classList.remove('show');
-  renderBookingServices();renderBookingDates();updateBookingSummary();
-});
-
-/* Turn every Fresha CTA into the native site booking experience. */
-document.querySelectorAll('a[href*="fresha.com"]').forEach(link=>{
-  link.removeAttribute('target');
-  link.removeAttribute('rel');
-  link.addEventListener('click',(e)=>{e.preventDefault();openBooking();});
-});
-
-document.querySelectorAll('.service-row').forEach(row=>{
-  row.style.cursor='pointer';
-  row.addEventListener('click',()=>openBooking());
-});
-
-/* Hide references to the old external provider in the rendered interface. */
-document.querySelectorAll('body *').forEach((el)=>{
-  if(el.children.length===0 && /Fresha/i.test(el.textContent)){
-    el.textContent=el.textContent.replace(/Fresha/gi,'agenda online');
-  }
-});
-
-/* ---------- Reveal animations ---------- */
-const revealEls=document.querySelectorAll('.hero-copy,.hero-visual,.intro-main,.service-row,.editorial-image,.editorial-copy,.compare-heading,.compare-frame,.gallery-intro,.gallery-mosaic,.testimonial-side,.testimonial-main,.booking-band,.contact-section');
-revealEls.forEach((el,i)=>{el.style.opacity='0';el.style.transform='translateY(22px)';el.style.transition=`opacity .7s ${Math.min(i*.03,.3)}s cubic-bezier(.2,.7,.1,1),transform .7s ${Math.min(i*.03,.3)}s cubic-bezier(.2,.7,.1,1)`});
-const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='none';obs.unobserve(e.target)}}),{threshold:.12});
-revealEls.forEach(el=>obs.observe(el));
+// Load the actual user-provided portrait after DOM is ready.
+const portrait=$('#gleiviaPortrait');if(portrait&&!portrait.src)fetch('assets/gleivia-about.webp.b64').then(r=>r.text()).then(b=>{portrait.src='data:image/webp;base64,'+b.trim()}).catch(()=>{});
