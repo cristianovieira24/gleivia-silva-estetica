@@ -1,1 +1,0 @@
-Redesign direction: editorial wellness studio inspired by premium wellness sites, with full-bleed imagery, oversized typography, reveal animations, hover-reveal treatment cards, professional portrait, location story and refined booking flow.
