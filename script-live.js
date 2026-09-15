@@ -1,1 +1,0 @@
-const s=document.createElement('script');s.src='script-redesign.js';document.body.appendChild(s);
